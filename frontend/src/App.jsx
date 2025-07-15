@@ -23,7 +23,8 @@ const App = () => {
           path="/search"
           element={
             <Search
-              
+              setPlayerSongs={setPlayerSongs}
+              setSongIndex={setCurrentSongIndex}
             />
           }
         />

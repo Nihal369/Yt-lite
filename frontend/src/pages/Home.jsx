@@ -25,18 +25,20 @@ const Home = () => {
   return (
     <div style={{ padding: "20px" }}>
       <h2>🔥 Trending Music</h2>
-      {trending.map((song) => (
-        <SongCard
-          key={song.id}
-          song={{
-            id: song.id,
-            title: song.snippet.title,
-            artist: song.snippet.channelTitle,
-            image: `https://i.ytimg.com/vi/${song.id}/hqdefault.jpg`,
-          }}
-          onPlay={() => handlePlay(song.id)}
-        />
-      ))}
+      <div className="results">
+        {trending.map((song) => (
+          <SongCard
+            key={song.id}
+            song={{
+              id: song.id,
+              title: song.snippet.title,
+              artist: song.snippet.channelTitle,
+              image: `https://i.ytimg.com/vi/${song.id}/hqdefault.jpg`,
+            }}
+            onPlay={() => handlePlay(song.id)}
+          />
+        ))}
+      </div>
     </div>
   );
 };

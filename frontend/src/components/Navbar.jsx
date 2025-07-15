@@ -8,7 +8,7 @@ const Navbar = () => {
 
   return (
     <nav className="navbar">
-      <h2 className="logo">🎵 Muzic</h2>
+      <h2 className="logo">🎵 Unmuto</h2>
       <ul>
         <li className={pathname === "/" ? "active" : ""}>
           <Link to="/">Home</Link>
