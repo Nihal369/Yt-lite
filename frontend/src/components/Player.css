@@ -1,0 +1,106 @@
+.player-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(18, 18, 18, 0.95);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-top: 1px solid #222;
+  transition: height 0.3s ease;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  flex-wrap: wrap;
+}
+
+.player-bar.minimized {
+  height: 80px;
+}
+
+.player-bar.expanded {
+  height: 350px;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 20px;
+}
+
+.player-bar .left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.player-bar .left img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.player-bar .left h4 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.player-bar .left p {
+  margin: 4px 0;
+  color: #aaa;
+  font-size: 13px;
+}
+
+.middle-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.middle-controls button {
+  background: #1db954;
+  border: none;
+  color: white;
+  padding: 8px 14px;
+  font-size: 16px;
+  border-radius: 30px;
+  cursor: pointer;
+}
+
+.middle-controls button:hover {
+  background: #1ed760;
+}
+
+.right-toggle {
+  margin-left: auto;
+}
+
+.right-toggle button {
+  background: transparent;
+  color: #ccc;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* iframe always stays in DOM */
+.iframe-wrapper {
+  width: 100%;
+  transition: max-height 0.3s ease;
+  overflow: hidden;
+}
+
+.iframe-wrapper.show {
+  max-height: 220px;
+}
+
+.iframe-wrapper.hide {
+  max-height: 0;
+}
+
+.iframe-wrapper iframe {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  border: none;
+}
