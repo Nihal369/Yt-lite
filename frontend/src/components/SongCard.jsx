@@ -1,15 +1,73 @@
 import React, { useEffect, useState } from "react";
+import axios from "axios";
+import "../components/SongCard.css";
+
+const YOUTUBE_API_KEY = "AIzaSyCN8HMS3qM1pK1gN7Vbfc6F_T8e47WhOQk";
+
+// Format views
+export const formatViews = (num) => {
+  if (num >= 1_000_000_000) return (num / 1_000_000_000).toFixed(1) + "B";
+  if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
+  if (num >= 1_000) return (num / 1_000).toFixed(1) + "K";
+  return num;
+};
+
+// Format time ago
+export const timeAgo = (dateString) => {
+  const now = new Date();
+  const then = new Date(dateString);
+  const seconds = Math.floor((now - then) / 1000);
+
+  const units = [
+    { label: "year", seconds: 31536000 },
+    { label: "month", seconds: 2592000 },
+    { label: "week", seconds: 604800 },
+    { label: "day", seconds: 86400 },
+    { label: "hour", seconds: 3600 },
+    { label: "minute", seconds: 60 },
+    { label: "second", seconds: 1 },
+  ];
+
+  for (let unit of units) {
+    const value = Math.floor(seconds / unit.seconds);
+    if (value > 0) return `${value} ${unit.label}${value > 1 ? "s" : ""} ago`;
+  }
+
+  return "Just now";
+};
+
+// Format ISO 8601 duration (e.g. PT4M13S) to mm:ss or h:mm:ss
+const formatDuration = (isoDuration) => {
+  const match = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return "";
+
+  const hours = parseInt(match[1]) || 0;
+  const minutes = parseInt(match[2]) || 0;
+  const seconds = parseInt(match[3]) || 0;
+
+  const padded = (n) => String(n).padStart(2, "0");
+
+  if (hours > 0) {
+    return `${hours}:${padded(minutes)}:${padded(seconds)}`;
+  }
+  return `${minutes}:${padded(seconds)}`;
+};
 
 const SongCard = ({ song, onPlay }) => {
-  const [playlists, setPlaylists] = useState([]);
-  const [selectedPlaylist, setSelectedPlaylist] = useState("");
-  const [isBookmarked, setIsBookmarked] = useState(false);
   const [thumbnail, setThumbnail] = useState("");
+  const [channelImage, setChannelImage] = useState("");
+  const [viewCount, setViewCount] = useState("");
+  const [duration, setDuration] = useState("");
 
-  // 1. Get high-quality thumbnail
   useEffect(() => {
     const getBestThumbnail = async () => {
-      const videoId = song.id?.videoId || song.id; // Handle both id formats
+      const videoId = song.id?.videoId || song.videoId || song.id;
+
+      if (!videoId) {
+        setThumbnail(song.image || "https://via.placeholder.com/320x180?text=No+Thumbnail");
+        return;
+      }
+
       const maxRes = `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`;
       const fallback = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 
@@ -29,91 +87,87 @@ const SongCard = ({ song, onPlay }) => {
   }, [song]);
 
   useEffect(() => {
-    const data = JSON.parse(localStorage.getItem("playlists")) || {};
-    setPlaylists(Object.keys(data));
+    const fetchExtraDetails = async () => {
+      try {
+        const videoId = song.id?.videoId || song.videoId || song.id;
+        if (!videoId) return;
 
-    const bookmarks = JSON.parse(localStorage.getItem("bookmarks")) || [];
-    const exists = bookmarks.some((s) => s.id === song.id);
-    setIsBookmarked(exists);
-  }, [song.id]);
+        const videoRes = await axios.get("https://www.googleapis.com/youtube/v3/videos", {
+          params: {
+            part: "statistics,snippet,contentDetails",
+            id: videoId,
+            key: YOUTUBE_API_KEY,
+          },
+        });
 
-  const handleAddToPlaylist = () => {
-    if (!selectedPlaylist) {
-      alert("Please select a playlist.");
-      return;
-    }
+        const video = videoRes.data.items[0];
+        if (!video) return;
 
-    const all = JSON.parse(localStorage.getItem("playlists")) || {};
-    if (!all[selectedPlaylist]) {
-      all[selectedPlaylist] = [];
-    }
+        setViewCount(video.statistics?.viewCount || "0");
 
-    if (all[selectedPlaylist].find((s) => s.id === song.id)) {
-      alert("Already in playlist.");
-      return;
-    }
+        const channelId = video.snippet?.channelId;
+        if (channelId) {
+          const channelRes = await axios.get("https://www.googleapis.com/youtube/v3/channels", {
+            params: {
+              part: "snippet",
+              id: channelId,
+              key: YOUTUBE_API_KEY,
+            },
+          });
 
-    all[selectedPlaylist].push(song);
-    localStorage.setItem("playlists", JSON.stringify(all));
-    alert("Song added to playlist: " + selectedPlaylist);
-  };
+          const channelPic = channelRes.data.items[0]?.snippet?.thumbnails?.default?.url;
+          setChannelImage(channelPic || "");
+        }
 
-  const toggleBookmark = () => {
-    const bookmarks = JSON.parse(localStorage.getItem("bookmarks")) || [];
-    const index = bookmarks.findIndex((s) => s.id === song.id);
+        const rawDuration = video.contentDetails?.duration;
+        if (rawDuration) {
+          setDuration(formatDuration(rawDuration));
+        }
+      } catch (err) {
+        console.error("Error fetching video/channel data", err);
+      }
+    };
 
-    if (index !== -1) {
-      bookmarks.splice(index, 1);
-      setIsBookmarked(false);
-      alert("Removed from bookmarks.");
-    } else {
-      bookmarks.push(song);
-      setIsBookmarked(true);
-      alert("Bookmarked!");
-    }
-
-    localStorage.setItem("bookmarks", JSON.stringify(bookmarks));
-  };
+    fetchExtraDetails();
+  }, [song]);
 
   return (
     <div style={styles.card}>
-      <img src={thumbnail} alt={song.title} style={styles.image} />
+      <a href="#" onClick={onPlay} style={{ position: "relative" }}>
+        {thumbnail && <img src={thumbnail} alt={song.title} style={styles.image} />}
+        {duration && <span style={styles.duration}>{duration}</span>}
+      </a>
+
       <div style={{ flexGrow: 1 }}>
-        <h4>{song.title}</h4>
-        <p>{song.artist || song.snippet?.channelTitle}</p>
-        <button onClick={onPlay} style={styles.play}>▶️ Play</button>
+        <h4 className=" two-line-clamp">{song.title}</h4>
 
-        <div style={{ marginTop: "10px" }}>
-          <select
-            value={selectedPlaylist}
-            onChange={(e) => setSelectedPlaylist(e.target.value)}
-          >
-            <option value="">➕ Add to Playlist</option>
-            {playlists.map((name) => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
-          {selectedPlaylist && <button onClick={handleAddToPlaylist}>✅</button>}
+        <div style={styles.channelRow}>
+          {channelImage && (
+            <img src={channelImage} alt="Channel" style={styles.channelImage} />
+          )}
+          <p style={styles.artist}>{song.artist}</p>
         </div>
-      </div>
 
-      {/* <button onClick={toggleBookmark} style={styles.bookmark}>
-        {isBookmarked ? "🔖 Bookmarked" : "⭐ Bookmark"}
-      </button> */}
+        {viewCount && (
+          <p style={styles.views}>
+            👁️ {formatViews(viewCount)} views • ⏱️{" "}
+            {timeAgo(song.snippet?.publishedAt)}
+          </p>
+        )}
+      </div>
     </div>
   );
 };
 
 const styles = {
   card: {
-    border: "1px solid #ccc",
     padding: "15px",
     borderRadius: "8px",
-    marginBottom: "15px",
-    // display: "flex",
-    gap: "15px",
-    alignItems: "center",
-    justifyContent: "space-between",
+    // marginBottom: "15px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    background: "#000000",
   },
   image: {
     width: "100%",
@@ -121,21 +175,39 @@ const styles = {
     objectFit: "cover",
     borderRadius: "8px",
   },
-  play: {
-    marginTop: "5px",
-    background: "#111",
-    color: "white",
-    padding: "5px 10px",
-    borderRadius: "5px",
-    cursor: "pointer",
+  duration: {
+    position: "absolute",
+    bottom: "8px",
+    right: "8px",
+    background: "rgba(0, 0, 0, 0.6)",
+    color: "#fff",
+    padding: "2px 6px",
+    fontSize: "12px",
+    fontWeight: "500",
+    borderRadius: "4px",
   },
-  bookmark: {
-    background: "#f0f0f0",
-    border: "1px solid #aaa",
-    borderRadius: "5px",
-    padding: "5px 10px",
-    cursor: "pointer",
+  channelRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    marginTop: "8px",
+  },
+  channelImage: {
+    width: "30px",
+    height: "30px",
+    borderRadius: "50%",
+  },
+  artist: {
     fontSize: "14px",
+    fontWeight: "700",
+    color: "#aaa",
+    margin: 0,
+  },
+  views: {
+    fontSize: "14px",
+    fontWeight: "500",
+    color: "#aaa",
+    marginTop: "4px",
   },
 };
 

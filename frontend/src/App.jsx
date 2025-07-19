@@ -5,8 +5,9 @@ import Player from "./components/Player";
 import CreatePlaylist from "./pages/CreatePlaylist";
 import MyPlaylists from "./pages/MyPlaylists";
 import Navbar from "./components/Navbar";
-import Home from "./pages/Home"
-import "./index.css"
+import Home from "./pages/Home";
+import PlayerPage from "./pages/PlayerPage"; // ⬅️ import here
+import "./index.css";
 
 const App = () => {
   const [playerSongs, setPlayerSongs] = useState([]);
@@ -17,8 +18,15 @@ const App = () => {
       <Navbar />
 
       <Routes>
-        <Route path="/" element={<Home setPlayerSongs={setPlayerSongs}
-              setSongIndex={setCurrentSongIndex}s />} />
+        <Route
+          path="/"
+          element={
+            <Home
+              setPlayerSongs={setPlayerSongs}
+              setSongIndex={setCurrentSongIndex}
+            />
+          }
+        />
         <Route
           path="/search"
           element={
@@ -38,15 +46,28 @@ const App = () => {
             />
           }
         />
+        <Route
+          path="/player"
+          element={
+            <PlayerPage
+              songs={playerSongs}
+              currentIndex={currentSongIndex}
+              setCurrentIndex={setCurrentSongIndex}
+            />
+          }
+        />
       </Routes>
 
-      {playerSongs.length > 0 && (
+      {/* Optional: remove below if you want player only in the /player page */}
+      
+      {/* {playerSongs.length > 0 && (
         <Player
           songs={playerSongs}
           currentIndex={currentSongIndex}
           setCurrentIndex={setCurrentSongIndex}
         />
-      )}
+      )}  */}
+     
     </Router>
   );
 };
